@@ -37,3 +37,29 @@ Output
 
 The description field of each track in the output tells what all of the source
 tracks were.
+
+
+# Foursquare to GPX
+
+Foursquare lets you download your checkins:
+https://foursquare.com/settings/privacy "Export My Data"
+
+They also offer API access (Free for a limited number of non-commercial
+queries): https://developer.foursquare.com
+
+This script takes the output of that export and queries the Foursquare API to
+make a series of GPX tracks with that data. These are tracks, not waypoints,
+because waypoints don't include the time information.
+
+Because the Foursquare API limits the number of calls you can make per day, this
+processes one month worth of checkins at a time and can be run each day until
+you've converted all of your checkins.
+
+To use this, you'll want to create a secrets.py with your Foursquare API keys
+
+```
+foursquare_client_id = 'YOUR CLIENT ID'
+foursquare_client_secret = 'YOUR CLIENT SECRET'
+```
+
+And edit the paths in foursquare-to-gpx.py
