@@ -55,7 +55,8 @@ def save_new_gpx_files(client, complete_gpx_files):
     for checkin in checkins:
         if checkin['type'] != 'checkin':
             continue
-        dt = datetime.datetime.fromtimestamp(checkin['createdAt'])
+        tz = datetime.timezone(datetime.timedelta(minutes=checkin['timeZoneOffset']))
+        dt = datetime.datetime.fromtimestamp(checkin['createdAt'], tz)
         checkin['createdAtDatetime'] = dt
         month = dt.strftime("%Y-%m")
         if month not in by_month:
@@ -77,12 +78,16 @@ def save_new_gpx_files(client, complete_gpx_files):
             if 'venue' in checkin:
                 venue_id = checkin['venue']['id']
                 venue_name = checkin['venue']['name']
-                if venue_id not in venues_seen:
-                    venues_seen[venue_id] = client.venues(venue_id)
-                    print(f"{venue_id}: {venues_seen[venue_id].get('name')}")
-                venue = venues_seen[venue_id]
-                lat = venue.get('venue', {}).get('location', {}).get('lat')
-                lng = venue.get('venue', {}).get('location', {}).get('lng')
+                if 'location' in checkin['venue']:
+                    lat = checkin['venue']['location']['lat']
+                    lng = checkin['venue']['location']['lng']
+                else:
+                    if venue_id not in venues_seen:
+                        venues_seen[venue_id] = client.venues(venue_id)
+                        print(f"{venue_id}: {venues_seen[venue_id].get('name')}")
+                    venue = venues_seen[venue_id]
+                    lat = venue.get('venue', {}).get('location', {}).get('lat')
+                    lng = venue.get('venue', {}).get('location', {}).get('lng')
             elif 'location' in checkin:
                 venue_name = checkin['location']['name']
                 lat = checkin['location']['lat']
@@ -93,9 +98,11 @@ def save_new_gpx_files(client, complete_gpx_files):
 
             if lat and lng:
                 track = gpxpy.gpx.GPXTrack()
-                track.name = f"{venue_name} {checkin_time.isoformat()}"
+                track.name = venue_name
+                track.comment = checkin_time.isoformat()
                 segment = gpxpy.gpx.GPXTrackSegment()
-                segment.points.append(gpxpy.gpx.GPXTrackPoint(lat, lng, time=checkin_time))
+                checkin_utc = checkin_time.astimezone(datetime.timezone.utc)
+                segment.points.append(gpxpy.gpx.GPXTrackPoint(lat, lng, time=checkin_utc))
                 track.segments.append(segment)
                 gpx.tracks.append(track)
             else:
