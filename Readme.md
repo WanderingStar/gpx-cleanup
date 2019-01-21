@@ -41,13 +41,16 @@ tracks were.
 
 # Foursquare to GPX
 
-Foursquare lets you download your checkins:
-https://foursquare.com/settings/privacy "Export My Data"
-
-They also offer API access (Free for a limited number of non-commercial
+Foursquare offers API access (Free for a limited number of non-commercial
 queries): https://developer.foursquare.com
 
-This script takes the output of that export and queries the Foursquare API to
+This script logs you in using the API (note that you have to configure a
+callback URL in the developer portal). This is slightly annoying for a
+command line script because you have to follow the link the script prints
+and log in in your browser, then copy the URL from the browser and paste
+it at the script's prompt.
+
+The script then queries the Foursquare API to
 make a series of GPX tracks with that data. These are tracks, not waypoints,
 because waypoints don't include the time information.
 
