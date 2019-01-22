@@ -50,9 +50,29 @@ command line script because you have to follow the link the script prints
 and log in in your browser, then copy the URL from the browser and paste
 it at the script's prompt.
 
-The script then queries the Foursquare API to
-make a series of GPX tracks with that data. These are tracks, not waypoints,
-because waypoints don't include the time information.
+Because this annoyed me to figure out: it doesn't really matter what the
+callback URL _is_. You don't need to be running a web service that knows
+how to handle OAuth2. Preferably, it's some URL you control, so nobody else
+can steal your token by looking at their logs (though how would they know
+to?). For example, I used the URL of a website I run. The important thing
+is that the URL is registered with the Foursquare API for your account.
+Otherwise you'll get a cryptic misconfiguration error when you open the
+URL the script asks you to open:
+
+> This app has a configuration problem and was unable to connect to your Foursquare account.
+>
+> Cause of error: Callback uri is not valid for this consumer
+
+The Foursquare API should redirect you to the callback URL with a
+`code=` query parameter. Copy the whole thing (or at least the `code=...`)
+and paste it at the script's prompt.
+
+The script uses that code to query the Foursquare API for your checkins,
+and creates a series of GPX tracks with that data. These are
+tracks, not waypoints, because waypoints don't include the time information.
+
+The times in these GPX tracks are in UTC, though they don't have a `Z` or
+`+00:00` time zone marker.
 
 Because the Foursquare API limits the number of calls you can make per day, this
 processes one month worth of checkins at a time and can be run each day until
