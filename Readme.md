@@ -66,3 +66,31 @@ foursquare_client_secret = 'YOUR CLIENT SECRET'
 ```
 
 And edit the paths in foursquare-to-gpx.py
+
+
+# Organize tracks by local day
+
+This uses the Azure timezone API to figure out what the local time was at
+the start of each track. It organizes the tracks into one GPX file per
+local day.
+
+You'll need to add an Azure key to secrets.py to use this. I considered
+a number of APIs that supply data like this, and this was the best one
+I could find, so I was willing to go through the hassle of an Azure account.
+
+```
+azure_key = 'YOUR KEY'
+```
+
+
+# Point before
+
+I have the start times and site names of a series of scuba dives in a CSV file.
+This finds the GPS point where each dive should have started (the latest
+point that is before the time the dive started) and prints them as a table
+for input into my divelog and as a GPX file of single point tracks.
+
+It would probably be faster to sort all points in all tracks and then search
+for the appropriate times, but this isn't too slow as it is.
+
+This one is not very polished (still has hardcoded filenames and time zones).

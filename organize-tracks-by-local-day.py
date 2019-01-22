@@ -5,9 +5,11 @@ from collections import defaultdict
 import gpxpy.gpx
 import requests
 import dateutil.parser
+import re
 
 from secrets import azure_key
 
+iso_pattern = r'\d\d\d\d-\d\d-\d\d[T ]\d\d:\d\d:\d\d([+-]\d\d:?\d\d|Z)?\s*'
 
 def first_point_with_time(gpx_track):
     for segment in gpx_track.segments:
@@ -36,14 +38,17 @@ def organize_by_local_day(input_gpx):
     for track in input_gpx.tracks:
         date = "Unknown"
         time = None
+        old_name = track.name
         try:
             point = first_point_with_time(track)
             time = point.time  # UTC!
             local = localtime_for_point(point)
             date = local.date().isoformat()
-            track.name = f"{local} {track.name}"
+            # strip out any lingering datetimes introduced by other things
+            # and prepend the local time
+            track.name = local.time().isoformat() + " " + re.sub(iso_pattern, '', old_name)
         finally:
-            print(f"Added track at {time}")
+            print(f"Added track at {time} UTC = {local.isoformat()} local: {old_name}")
             tracks_by_date[date].append((time, track))
     return tracks_by_date
 
@@ -54,9 +59,10 @@ def sort_tracks_into_gpx(tracks_by_date):
         output_gpx = gpxpy.gpx.GPX()
         output_gpx.tracks = []
         sorted_time_tracks = sorted(time_tracks, key=lambda t: t[0])
-        print(f"Sorting {date}\n" + "\n".join([f"  {ti} {tr.name}" for ti,tr in sorted_time_tracks]))
+        print(f"Sorting {date}\n" + "\n".join([f"  {ti} UTC: {tr.name}" for ti,tr in sorted_time_tracks]))
         for time, track in sorted_time_tracks:
             track.extensions = None  # TODO gpxpy doesn't deal with garmin extensions properly
+            track.number = len(output_gpx.tracks) + 1
             output_gpx.tracks.append(track)
         gpx_by_date[date] = output_gpx
 
