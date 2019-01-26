@@ -100,7 +100,7 @@ def gpx_merge_intersect(input_gpx):
         track.segments.append(merged)
 
         track.name = " ".join(
-            [str(start)] + custom_names + [f"{k}: {v}" for k, v in labels.most_common()]
+            custom_names + [f"{k}: {v}" for k, v in labels.most_common()]
         )
         track.description = "\n".join(sorted(original_names))
         output_gpx.tracks.append(track)
