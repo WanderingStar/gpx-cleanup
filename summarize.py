@@ -14,7 +14,6 @@ class Summary:
         self.max_speed = 0
 
     def add_track(self, track):
-        track.reduce_points(min_distance=10)
         self.tracks += 1
         self.points += track.get_points_no()
         moving_data = track.get_moving_data()
