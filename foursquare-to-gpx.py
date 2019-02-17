@@ -60,7 +60,7 @@ def save_new_gpx_files(client, complete_gpx_files):
         checkin['createdAtDatetime'] = dt
         month = dt.strftime("%Y-%m")
         if month not in by_month:
-            print(f"found checkings for {month}")
+            print(f"found checkin for {month}")
         by_month[month].append(checkin)
 
     for month in sorted(by_month.keys()):
@@ -78,6 +78,7 @@ def save_new_gpx_files(client, complete_gpx_files):
             if 'venue' in checkin:
                 venue_id = checkin['venue']['id']
                 venue_name = checkin['venue']['name']
+                venue_categories = [c['shortName'] for c in checkin['venue'].get('categories', [])]
                 if 'location' in checkin['venue']:
                     lat = checkin['venue']['location']['lat']
                     lng = checkin['venue']['location']['lng']
@@ -90,10 +91,12 @@ def save_new_gpx_files(client, complete_gpx_files):
                     lng = venue.get('venue', {}).get('location', {}).get('lng')
             elif 'location' in checkin:
                 venue_name = checkin['location']['name']
+                venue_categories = []
                 lat = checkin['location']['lat']
                 lng = checkin['location']['lng']
             else:
                 print(checkin)
+                continue
             print(f"{checkin_time.isoformat()} {venue_name}")
 
             if lat and lng:
@@ -105,6 +108,16 @@ def save_new_gpx_files(client, complete_gpx_files):
                 segment.points.append(gpxpy.gpx.GPXTrackPoint(lat, lng, time=checkin_utc))
                 track.segments.append(segment)
                 gpx.tracks.append(track)
+
+                waypoint = gpxpy.gpx.GPXWaypoint(
+                    lat, lng,
+                    time=checkin_utc,
+                    name=venue_name,
+                    type=' '.join(venue_categories),
+                    comment=json.dumps({'localtime': str(checkin_time)})
+                )
+                waypoint.source = '4sq'
+                gpx.waypoints.append(waypoint)
             else:
                 print(json.dumps(venue, indent=2))
 
