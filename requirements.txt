@@ -3,3 +3,5 @@ intervaltree
 foursquare
 requests
 geojson
+sqlalchemy
+psycopg2
