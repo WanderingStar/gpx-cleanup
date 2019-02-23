@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from geojson import FeatureCollection
 import simplejson as json
 
-from model import GPSPoint, GPSTrack, db_url, DecimalEncoder
+from model import GPSPoint, GPSTrack, db_url
 
 if __name__ == '__main__':
     # parser = argparse.ArgumentParser()

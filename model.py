@@ -2,7 +2,7 @@ import json
 import os
 
 import sqlalchemy
-from geojson import Feature, MultiLineString, Point
+from geojson import Feature, LineString, Point
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -52,8 +52,9 @@ class GPSTrack(Base):
             return Feature(geometry=Point(p.coords),
                            properties=props)
 
+        east = self.points[0].is_east
         return Feature(
-            geometry=MultiLineString([p.coords for p in self.points]),
+            geometry=LineString([p.corrected_coords(east) for p in self.points]),
             properties=props)
 
 
@@ -73,10 +74,26 @@ class GPSPoint(Base):
     track = relationship('GPSTrack', back_populates='points')
 
     @property
+    def is_east(self):
+        return self.longitude > 0
+
+    @property
     def coords(self):
         if self.elevation is None:
             return (self.longitude, self.latitude)
         return (self.longitude, self.latitude, self.elevation)
+
+    def corrected_coords(self, east=True):
+        # for tracks that cross the antimeridian or incidentally the meridian,
+        # this helps leaflet.js figure out not to try to wrap the world
+        longitude = self.longitude
+        if east and self.longitude < 0:
+            longitude += 360  # stay east
+        if not east and self.longitude > 0:
+            longitude -= 360  # stay west
+        if self.elevation is None:
+            return (longitude, self.latitude)
+        return (longitude, self.latitude, self.elevation)
 
 
 def postgres_timezone(tzinfo):
@@ -85,13 +102,6 @@ def postgres_timezone(tzinfo):
     sign = '+' if minutes < 0 else '-'
     minutes = abs(minutes)
     return f"UTC{sign}{minutes // 60:02d}:{minutes % 60:02d}"
-
-
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, decimal.Decimal):
-            return str(o)
-        return super(DecimalEncoder, self).default(o)
 
 
 if __name__ == '__main__':
