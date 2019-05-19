@@ -22,14 +22,18 @@ if __name__ == '__main__':
     #    print(track.name)
 
     features = []
+    east = None
     for track_id, time in (
             session.query(GPSPoint.track_id, func.min(GPSPoint.time).label('time'))
-                    .filter(func.date(func.timezone(GPSPoint.tz, GPSPoint.time)) == '2018-12-26')
+                    .filter(func.date(func.timezone(GPSPoint.tz, GPSPoint.time)) > '2018-12-24')
+                    .filter(func.date(func.timezone(GPSPoint.tz, GPSPoint.time)) < '2019-01-15')
                     .group_by(GPSPoint.track_id)
                     .order_by('time')
     ):
-        features.append(session.query(GPSTrack).get(track_id).as_geojson_feature)
-        print(session.query(GPSTrack).get(track_id).name)
+        track = session.query(GPSTrack).get(track_id)
+        east = east if east is not None else track.is_east
+        features.append(track.as_geojson_feature(east))
+        print(track.name)
     collection = FeatureCollection(features)
 
     outfile = "/Users/aneel/Downloads/2018-12-26.json"
