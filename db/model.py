@@ -32,6 +32,7 @@ class GPSTrack(Base):
     type = Column(String)
 
     properties = Column(JSONB)
+    raw = Column(JSONB)
 
     points = relationship('GPSPoint', order_by='GPSPoint.time', back_populates='track')
 
@@ -131,6 +132,15 @@ class GPSPoint(Base):
         sign = -1 if sign == '+' else 1
         offset = timedelta(minutes=sign * (int(hours) * 60 + int(minutes)))
         return self.time.astimezone(timezone(offset))
+
+
+class Categorization(Base):
+    __tablename__ = 'categorization'
+
+    id = Column(Integer, primary_key=True)
+    category = Column(String, nullable=False)
+    old_category = Column(String)
+    old_name = Column(String)
 
 
 if __name__ == '__main__':

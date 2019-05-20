@@ -5,7 +5,7 @@ import foursquare
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
-from model import GPSPoint, db_url, GPSTrack, postgres_timezone
+from model import GPSPoint, db_url, GPSTrack
 from secrets import foursquare_client_id, foursquare_client_secret
 
 # redirect_uri registered on developer.foursquare.com
@@ -54,11 +54,12 @@ def load_4sq_checkin(session, checkin):
         'venue_id': venue['id'],
         'timezone': str(tz),
     }
+    gps_track.raw = checkin
     gps_point = GPSPoint(latitude=venue['location']['lat'],
                          longitude=venue['location']['lng'],
                          time=dt,
-                         tz=postgres_timezone(tz),
                          track=gps_track)
+    gps_point.set_timezone(tz)
     gps_point.properties = {
         'localtime': dt.isoformat(),
     }
@@ -80,10 +81,11 @@ if __name__ == '__main__':
             continue
         # checkin with this ID is already in the DB
         if (session
-                .query(GPSPoint)
-                .filter(GPSPoint.properties['checkin_id'].astext == checkin['id'])
+                .query(GPSTrack)
+                .filter(GPSTrack.properties['checkin_id'].astext == checkin['id'])
                 .count()) > 0:
-            continue
+            # continue
+            pass
         gps_track = load_4sq_checkin(session, checkin)
         if gps_track:
             session.commit()
