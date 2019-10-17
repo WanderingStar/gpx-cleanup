@@ -3,8 +3,26 @@ services:
   db:
     image: postgres
     environment:
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: CDGh9bAVjH2ez9AjbnjzxGnFwHdU7woR
     ports:
     - 5432:5432
     volumes:
-    - ./pgdata:/var/lib//datapostgresql
+    - ./pgdata:/var/lib/datapostgresql
+
+  notebook:
+    build: .
+    image: notebook
+    ports:
+    - 8888:8888
+    volumes:
+    - ./src:/home/jovyan/src
+    - ./notebook:/home/jovyan/notebook
+    - ./secrets.py:/secrets/secrets.py
+    depends_on:
+    - db
+    environment:
+      DB_HOST: db
+      DB_PASS: CDGh9bAVjH2ez9AjbnjzxGnFwHdU7woR
+      JUPYTER_ENABLE_LAB: "yes"
+      PYTHONPATH: /secrets:/home/jovyan/src
+

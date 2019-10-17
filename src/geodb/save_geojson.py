@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import sqlalchemy
 from sqlalchemy import func
 from sqlalchemy.orm import sessionmaker

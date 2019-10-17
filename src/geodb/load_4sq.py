@@ -5,7 +5,7 @@ import foursquare
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
-from model import GPSPoint, db_url, GPSTrack
+from geodb.model import GPSPoint, db_url, GPSTrack
 from secrets import foursquare_client_id, foursquare_client_secret
 
 # redirect_uri registered on developer.foursquare.com
@@ -69,7 +69,7 @@ def load_4sq_checkin(session, checkin):
     return gps_track
 
 
-if __name__ == '__main__':
+def load_4sq():
     engine = sqlalchemy.create_engine(db_url(), echo=False)
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -90,3 +90,7 @@ if __name__ == '__main__':
         if gps_track:
             session.commit()
             print(f"{i}\t{gps_track.points[0].properties['localtime']}\t{gps_track.name}")
+
+
+if __name__ == '__main__':
+    load_4sq()

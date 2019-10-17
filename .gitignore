@@ -107,3 +107,4 @@ venv.bak/
 
 /secrets.py
 /pgdata/
+scratch.py

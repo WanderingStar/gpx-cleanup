@@ -113,7 +113,7 @@ class GPSPoint(Base):
             longitude -= 360  # stay west
         if self.elevation is None:
             return (longitude, self.latitude)
-        return (longitude, self.latitude, self.elevation)
+        return (float(longitude), float(self.latitude), float(self.elevation))
 
     def set_timezone(self, tzinfo):
         """For some reason Postgres uses the opposite sign"""
