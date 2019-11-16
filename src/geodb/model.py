@@ -54,8 +54,20 @@ class GPSTrack(Base):
             return None
         return self.points[0].is_east
 
+    @property
+    def bounds(self):
+        min_lat, min_lon = self.points[0].corrected_coords(self.is_east)[0:2]
+        max_lat, max_lon = min_lat, min_lon
+        for p in self.points:
+            coords = p.corrected_coords(self.is_east)[0:2]
+            min_lat = min(min_lat, coords[0])
+            min_lon = min(min_lon, coords[0])
+            max_lat = max(max_lat, coords[0])
+            max_lon = max(max_lon, coords[0])
+        return (min_lat, min_lon, max_lat, max_lon)
+
     def as_geojson_feature(self, east):
-        props = dict(self.properties)
+        props = dict(self.properties or {})
         props.update({
             'track_id': self.id,
             'name': self.name,
@@ -112,7 +124,7 @@ class GPSPoint(Base):
         if not east and self.longitude > 0:
             longitude -= 360  # stay west
         if self.elevation is None:
-            return (longitude, self.latitude)
+            return (float(longitude), float(self.latitude))
         return (float(longitude), float(self.latitude), float(self.elevation))
 
     def set_timezone(self, tzinfo):

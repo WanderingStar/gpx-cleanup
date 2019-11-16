@@ -5,7 +5,7 @@ import gpxpy
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
-from model import GPSPoint, GPSTrack, db_url
+from geodb.model import GPSPoint, GPSTrack, db_url
 
 ALL = object()
 filtered_properties = {
@@ -86,19 +86,21 @@ def load_gpx(session, input_gpx):
         session.add(gps_track)
         session.add(gps_point)
 
+def load_gpx_files(files):
+    engine = sqlalchemy.create_engine(db_url(), echo=False)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    for file in files:
+        with open(file, 'r') as gpx_file:
+            print(f"Loading {file}")
+            input_gpx = gpxpy.parse(gpx_file)
+            load_gpx(session, input_gpx)
+            session.commit()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("input", nargs='+', help="Path to GPX files to process")
     args = parser.parse_args()
 
-    engine = sqlalchemy.create_engine(db_url(), echo=False)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    for file in args.input:
-        with open(file, 'r') as gpx_file:
-            print(f"Loading {file}")
-            input_gpx = gpxpy.parse(gpx_file)
-            load_gpx(session, input_gpx)
-            session.commit()
+    load_gpx_files(args.input)

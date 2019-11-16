@@ -76,6 +76,7 @@ def load_4sq():
 
     client = authenticated_client()
     checkins = client.users.all_checkins()
+    m = 1
     for i, checkin in enumerate(checkins):
         if checkin['type'] != 'checkin':
             continue
@@ -89,7 +90,9 @@ def load_4sq():
         gps_track = load_4sq_checkin(session, checkin)
         if gps_track:
             session.commit()
-            print(f"{i}\t{gps_track.points[0].properties['localtime']}\t{gps_track.name}")
+            if i % m == 0:
+                m *= 2
+                print(f"{i}\t{gps_track.points[0].properties['localtime']}\t{gps_track.name}")
 
 
 if __name__ == '__main__':
