@@ -1,5 +1,6 @@
 import argparse
 from datetime import timezone
+import os.path
 
 import gpxpy
 import sqlalchemy
@@ -19,7 +20,7 @@ def slots_as_dict(obj):
     return {s: getattr(obj, s) for s in obj.__slots__ if hasattr(obj, s)}
 
 
-def load_gpx(session, input_gpx):
+def load_gpx(session, input_gpx, filename):
     for track in input_gpx.tracks:
         # each GPX segment is a GPSTrack
         for i, segment in enumerate(track.segments):
@@ -29,7 +30,7 @@ def load_gpx(session, input_gpx):
                 name = track.name
             print(f"track {track.name}")
             gps_track = GPSTrack(name=name, comment=track.comment, description=track.description,
-                                 source=track.source, type=track.type)
+                                 source=track.source, type=track.type, filename=filename)
             gps_track.properties = {
                 k: v for k, v in slots_as_dict(track).items()
                 if v is not None
@@ -65,7 +66,7 @@ def load_gpx(session, input_gpx):
         print(f"waypoint {point.name}")
         # each GPX waypoint is a GPSTrack with a single point
         time = point.time
-        if time.tzinfo is None:
+        if time is not None and time.tzinfo is None:
             time = time.replace(tzinfo=timezone.utc)
         gps_track = GPSTrack(name=point.name, comment=point.comment, description=point.description,
                              source=point.source, type=point.type or "Waypoint")
@@ -94,8 +95,9 @@ def load_gpx_files(files):
     for file in files:
         with open(file, 'r') as gpx_file:
             print(f"Loading {file}")
+            filename = os.path.basename(file)
             input_gpx = gpxpy.parse(gpx_file)
-            load_gpx(session, input_gpx)
+            load_gpx(session, input_gpx, filename)
             session.commit()
 
 if __name__ == '__main__':

@@ -30,6 +30,7 @@ class GPSTrack(Base):
     description = Column(String)
     source = Column(String)
     type = Column(String)
+    filename = Column(String)
 
     properties = Column(JSONB)
     raw = Column(JSONB)
