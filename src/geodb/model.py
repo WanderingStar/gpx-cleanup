@@ -7,6 +7,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
+from ipyleaflet import Polyline
+
 Base = declarative_base()
 
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
@@ -19,7 +21,6 @@ def db_url():
     port = os.environ.get('DB_PORT', '5432')
     database = os.environ.get('DB_DATABASE', 'postgres')
     return f'postgresql://{user}:{password}@{host}:{port}/{database}'
-
 
 class GPSTrack(Base):
     __tablename__ = 'track'
@@ -90,6 +91,28 @@ class GPSTrack(Base):
             geometry=LineString([p.corrected_coords(east) for p in self.points]),
             properties=props)
 
+    def as_polyline(self, **kwargs):
+        # returns a multi-polyline with all
+        points = [p.lat_lon for p in self.points]
+        lines = []
+        # reversed so as not to interrupt the iteration when we reassign points
+        for i in reversed(range(1, len(points))):
+            lat_1, lon_1 = points[i]
+            lat_2, lon_2 = points[i - 1]
+            if abs(lon_1 - lon_2) > 180:
+                if lon_1 > 0:
+                    lon_2 += 360
+                    lon_m = 180
+                else:
+                    lon_2 -= 360
+                    lon_m = -180
+                f = (lon_m - lon_1) / (lon_2 - lon_1)
+                lat_m = lat_1 + f * (lat_2 - lat_1)
+                lines.append([[lat_m, lon_m]] + points[i:])
+                points = points[0:i] + [[lat_m, -lon_m]]
+        lines.append(points)
+        return Polyline(locations=list(reversed(lines)), **kwargs)
+
 
 class GPSPoint(Base):
     __tablename__ = 'point'
@@ -116,7 +139,13 @@ class GPSPoint(Base):
             return (self.longitude, self.latitude)
         return (self.longitude, self.latitude, self.elevation)
 
-    def corrected_coords(self, east=True):
+    @property
+    def lat_lon(self):
+        # always between -180 and 180 longitude
+        ll = [self.latitude, (self.longitude + 180) % 360 - 180]
+        return ll
+
+    def corrected_coords(self, east=True, include_elevation=False):
         # for tracks that cross the antimeridian or incidentally the meridian,
         # this helps leaflet.js figure out not to try to wrap the world
         longitude = self.longitude
@@ -124,7 +153,7 @@ class GPSPoint(Base):
             longitude += 360  # stay east
         if not east and self.longitude > 0:
             longitude -= 360  # stay west
-        if self.elevation is None:
+        if self.elevation is None or not include_elevation:
             return (float(longitude), float(self.latitude))
         return (float(longitude), float(self.latitude), float(self.elevation))
 

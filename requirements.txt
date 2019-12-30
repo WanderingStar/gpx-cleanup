@@ -5,3 +5,4 @@ requests
 geojson
 sqlalchemy
 psycopg2-binary
+ipyleaflet
