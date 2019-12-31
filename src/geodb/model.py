@@ -1,13 +1,13 @@
 import os
 import re
-import sqlalchemy
 from datetime import timezone, timedelta
+
+import sqlalchemy
 from geojson import Feature, LineString, Point
+from ipyleaflet import Polyline
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
-from ipyleaflet import Polyline
 
 Base = declarative_base()
 
@@ -21,6 +21,7 @@ def db_url():
     port = os.environ.get('DB_PORT', '5432')
     database = os.environ.get('DB_DATABASE', 'postgres')
     return f'postgresql://{user}:{password}@{host}:{port}/{database}'
+
 
 class GPSTrack(Base):
     __tablename__ = 'track'
@@ -63,9 +64,9 @@ class GPSTrack(Base):
         for p in self.points:
             coords = p.corrected_coords(self.is_east)[0:2]
             min_lat = min(min_lat, coords[0])
-            min_lon = min(min_lon, coords[0])
+            min_lon = min(min_lon, coords[1])
             max_lat = max(max_lat, coords[0])
-            max_lon = max(max_lon, coords[0])
+            max_lon = max(max_lon, coords[1])
         return (min_lat, min_lon, max_lat, max_lon)
 
     def as_geojson_feature(self, east):
@@ -101,11 +102,11 @@ class GPSTrack(Base):
             lat_2, lon_2 = points[i - 1]
             if abs(lon_1 - lon_2) > 180:
                 if lon_1 > 0:
-                    lon_2 += 360
-                    lon_m = 180
+                    lon_2 += 360.
+                    lon_m = 180.
                 else:
-                    lon_2 -= 360
-                    lon_m = -180
+                    lon_2 -= 360.
+                    lon_m = -180.
                 f = (lon_m - lon_1) / (lon_2 - lon_1)
                 lat_m = lat_1 + f * (lat_2 - lat_1)
                 lines.append([[lat_m, lon_m]] + points[i:])
@@ -142,8 +143,7 @@ class GPSPoint(Base):
     @property
     def lat_lon(self):
         # always between -180 and 180 longitude
-        ll = [self.latitude, (self.longitude + 180) % 360 - 180]
-        return ll
+        return [float(self.latitude), float(self.longitude + 180) % 360 - 180]
 
     def corrected_coords(self, east=True, include_elevation=False):
         # for tracks that cross the antimeridian or incidentally the meridian,
@@ -183,6 +183,20 @@ class Categorization(Base):
     category = Column(String, nullable=False)
     old_category = Column(String)
     old_name = Column(String)
+
+
+def clone_model(model, **kwargs):
+    """Clone an arbitrary sqlalchemy model object without its primary key values."""
+    # Ensure the model’s data is loaded before copying.
+    model.id
+
+    table = model.__table__
+    non_pk_columns = [k for k in table.columns.keys() if k not in table.primary_key]
+    data = {c: getattr(model, c) for c in non_pk_columns}
+    data.update(kwargs)
+
+    clone = model.__class__(**data)
+    return clone
 
 
 if __name__ == '__main__':
