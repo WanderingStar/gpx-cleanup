@@ -12,6 +12,7 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
+import gpxpy.gpx
 
 
 def db_url():
@@ -40,26 +41,26 @@ class GPSTrack(Base):
     points = relationship('GPSPoint', order_by='GPSPoint.time', back_populates='track')
 
     @property
-    def start_localtime(self):
+    def start(self):
         if not self.points:
             return None
-        return self.points[0].localtime
+        return self.points[0]
 
     @property
-    def end_localtime(self):
+    def end(self):
         if not self.points:
             return None
-        return self.points[-1].localtime
+        return self.points[-1]
 
     @property
     def is_east(self):
         if not self.points:
             return None
-        return self.points[0].is_east
+        return self.start.is_east
 
     @property
     def bounds(self):
-        min_lat, min_lon = self.points[0].corrected_coords(self.is_east)[0:2]
+        min_lat, min_lon = self.start.corrected_coords(self.is_east)[0:2]
         max_lat, max_lon = min_lat, min_lon
         for p in self.points:
             coords = p.corrected_coords(self.is_east)[0:2]
@@ -78,12 +79,12 @@ class GPSTrack(Base):
             'description': self.description,
             'source': self.source,
             'type': self.type,
-            'start': str(self.start_localtime),
+            'start': str(self.start.localtime),
             'end': str(self.end_localtime),
         })
         props = {k: v for k, v in props.items() if v is not None}
         if len(self.points) == 1:
-            p = self.points[0]
+            p = self.start
             return Feature(geometry=Point(p.corrected_coords(east)),
                            properties=props)
 
@@ -113,6 +114,24 @@ class GPSTrack(Base):
                 points = points[0:i] + [[lat_m, -lon_m]]
         lines.append(points)
         return Polyline(locations=list(reversed(lines)), **kwargs)
+
+    def as_gpxpy(self):
+        if len(self.points) == 1:
+            p = self.start
+            w = gpxpy.gpx.GPXWaypoint(
+                latitude=p.latitude, longitude=p.longitude, elevation=p.elevation,
+                time=p.time, name=self.name, description=self.description, type=self.type,
+                comment=self.source or self.filename
+            )
+            return w
+        t = gpxpy.gpx.GPXTrack(name=self.name, description=self.description)
+        s = gpxpy.gpx.GPXTrackSegment()
+        t.segments.append(s)
+        for p in self.points:
+            s.points.append(gpxpy.gpx.GPXTrackPoint(
+                latitude=p.latitude, longitude=p.longitude, elevation=p.elevation, time=p.time))
+        return t
+
 
 
 class GPSPoint(Base):
@@ -198,6 +217,16 @@ def clone_model(model, **kwargs):
     clone = model.__class__(**data)
     return clone
 
+def save_gpx(file, tracks):
+    gpx = gpxpy.gpx.GPX()
+    for t in tracks:
+        g = t.as_gpxpy
+        if isinstance(g, gpxpy.gpx.GPXWaypoint):
+            gpx.waypoints.append(g)
+        else:
+            gpx.tracks.append(g)
+    with open(file, "w") as fh:
+        print(fh, gpx.to_xml())
 
 if __name__ == '__main__':
     engine = sqlalchemy.create_engine(db_url(), echo=True)

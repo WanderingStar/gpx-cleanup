@@ -3,7 +3,7 @@ import requests
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
-from model import db_url, GPSTrack, postgres_timezone
+from geodb.model import db_url, GPSTrack, GPSPoint
 from secrets import azure_key
 
 
@@ -23,13 +23,13 @@ def localtime_for_point(gps_point):
 
 
 def add_tz_to_points(points):
-    tz0 = points[0].tz or postgres_timezone(localtime_for_point(points[0]).tzinfo)
-    points[0].tz = tz0
-    tzN = points[-1].tz or postgres_timezone(localtime_for_point(points[-1]).tzinfo)
-    points[-1].tz = tzN
+    if points[0].tz is None:
+        points[0].set_timezone(localtime_for_point(points[0]).tzinfo)
+    if points[-1].tz is None:
+        points[-1].set_timezone(localtime_for_point(points[-1]).tzinfo)
     if len(points) < 3:
         return
-    if tz0 == tzN:
+    if points[0].tz == points[-1].tz:
         for point in points[1:-1]:
             point.tz = points[0].tz
     else:
@@ -43,7 +43,10 @@ if __name__ == '__main__':
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    for gps_track in session.query(GPSTrack):
+    track_ids = session.query(GPSPoint).filter(GPSPoint.tz == None).distinct(GPSPoint.track_id).all()
+    print(f"{len(track_ids)} tracks are missing time zones")
+
+    for gps_track in session.query(GPSTrack).filter(GPSTrack.id.in_(track_ids)):
         if not gps_track.points:
             continue
         if gps_track.points[0].tz:
