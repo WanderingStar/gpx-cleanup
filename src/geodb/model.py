@@ -93,14 +93,19 @@ class GPSTrack(Base):
             geometry=LineString([p.corrected_coords(east) for p in self.points]),
             properties=props)
 
-    def as_polyline(self, **kwargs):
-        # returns a multi-polyline with all
-        points = [p.lat_lon for p in self.points]
+    # returns a multi-polyline if there are antimeridian crossings
+    def as_polyline(self, start=None, end=None, **kwargs):
+        # filter points by start and end time
+        points = [p.lat_lon for p in self.points
+                  if (start is None or p.time >= start) and (end is None or p.time <= end)]
         lines = []
         # reversed so as not to interrupt the iteration when we reassign points
         for i in reversed(range(1, len(points))):
             lat_1, lon_1 = points[i]
             lat_2, lon_2 = points[i - 1]
+            # if this pair of points crosses the antimeridian, break the track
+            # into two tracks, one on each side of the globe, with an artificial
+            # point added (m, the middle point) at the antimeridian
             if abs(lon_1 - lon_2) > 180:
                 if lon_1 > 0:
                     lon_2 += 360.
@@ -131,6 +136,9 @@ class GPSTrack(Base):
             s.points.append(gpxpy.gpx.GPXTrackPoint(
                 latitude=p.latitude, longitude=p.longitude, elevation=p.elevation, time=p.time))
         return t
+
+    def __str__(self):
+        return f"<GPSTrack {self.name or self.filename or self.id}>"
 
 
 
@@ -193,6 +201,9 @@ class GPSPoint(Base):
         sign = -1 if sign == '+' else 1
         offset = timedelta(minutes=sign * (int(hours) * 60 + int(minutes)))
         return self.time.astimezone(timezone(offset))
+
+    def __str__(self):
+        return f"<GPSPoint {self.time} {self.latitude}, {self.longitude}>"
 
 
 class Categorization(Base):
