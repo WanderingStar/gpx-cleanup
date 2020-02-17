@@ -37,6 +37,8 @@ class GPSTrack(Base):
 
     properties = Column(JSONB)
     raw = Column(JSONB)
+    parent_id = Column(Integer, ForeignKey('track.id', ondelete="SET NULL"))
+    parent = relationship('GPSTrack', remote_side=[id])
 
     points = relationship('GPSPoint', order_by='GPSPoint.time', back_populates='track')
 
@@ -136,6 +138,17 @@ class GPSTrack(Base):
             s.points.append(gpxpy.gpx.GPXTrackPoint(
                 latitude=p.latitude, longitude=p.longitude, elevation=p.elevation, time=p.time))
         return t
+
+    def section(self, start, end):
+        if self.start.time >= start and self.end.time <= end:
+            return self
+        track = clone_model(self)
+        track.parent = self
+        track.points = [clone_model(p, track=track) for p in self.points
+                        if p.time >= start and p.time <= end]
+        if len(track.points) == 0:
+            return None
+        return track
 
     def __str__(self):
         return f"<GPSTrack {self.name or self.filename or self.id}>"
